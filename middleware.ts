@@ -2,6 +2,16 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { UserRole } from '@/lib/types'
 
+function isProtectedRoute(pathname: string): boolean {
+  return (
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/candidato') ||
+    pathname.startsWith('/empresa') ||
+    pathname.startsWith('/medico') ||
+    pathname.startsWith('/admin')
+  )
+}
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -24,22 +34,20 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // Refresh session — must not use getSession() here per @supabase/ssr docs
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
 
-  // Redirect unauthenticated users away from protected routes
-  if (!user && pathname.startsWith('/dashboard')) {
+  // Unauthenticated user trying to access a protected route
+  if (!user && isProtectedRoute(pathname)) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (!user && isAppRoute(pathname)) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (user && isAppRoute(pathname)) {
+  // Authenticated user: enforce role-based access
+  if (user && isProtectedRoute(pathname)) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -59,18 +67,13 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith('/candidato') && role !== 'CANDIDATO' && role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
+
+    if (pathname.startsWith('/admin') && role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
   }
 
   return supabaseResponse
-}
-
-function isAppRoute(pathname: string): boolean {
-  return (
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/candidato') ||
-    pathname.startsWith('/empresa') ||
-    pathname.startsWith('/medico')
-  )
 }
 
 export const config = {

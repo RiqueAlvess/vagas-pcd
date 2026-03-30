@@ -44,6 +44,7 @@ VISUAL, AUDITIVA, FISICA, MENTAL, MULTIPLA
 - API routes (/api/*) handle mutations and use supabaseAdmin for service role ops
 - Middleware handles auth redirect and role-based routing
 - Never use 'any' type — define all types in lib/types.ts
+- Auth pattern: always use createServerClient in server components, createBrowserClient in client components
 
 ## Post-Implementation Checklist
 - [ ] TypeScript compiles without errors (npm run build)
