@@ -26,12 +26,19 @@ export interface Profile {
 
 export interface Candidate {
   id: string
-  profile_id: string
+  bio: string | null
+  phone: string | null
+  city: string | null
+  state: string | null
   deficiency_types: DeficiencyType[]
+  deficiency_description: string | null
   medical_status: MedicalStatus
-  laudo_url: string | null
-  laudo_reviewed_by: string | null
-  laudo_reviewed_at: string | null
+  medical_report_url: string | null
+  medical_notes: string | null
+  medical_reviewed_by: string | null
+  medical_reviewed_at: string | null
+  skills: string[] | null
+  years_experience: number | null
   created_at: string
   updated_at: string
 }
