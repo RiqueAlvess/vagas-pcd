@@ -4,11 +4,13 @@ import Image from "next/image";
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: { code?: string }
+  searchParams: Promise<{ code?: string }>
 }) {
+  const params = await searchParams
+
   // If Supabase sends auth code to homepage instead of /auth/callback, forward it
-  if (searchParams.code) {
-    redirect(`/auth/callback?code=${searchParams.code}`)
+  if (params.code) {
+    redirect(`/auth/callback?code=${params.code}`)
   }
 
   return (
