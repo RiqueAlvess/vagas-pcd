@@ -46,6 +46,11 @@ VISUAL, AUDITIVA, FISICA, MENTAL, MULTIPLA
 - Never use 'any' type — define all types in lib/types.ts
 - Auth pattern: always use createServerClient in server components, createBrowserClient in client components
 
+## Storage Patterns
+- Always prefix storage paths with `{userId}/{timestamp}.ext` to prevent collisions and path traversal
+- Use the admin client (service role) for all storage uploads — never the anon client
+- Bucket `medical-reports` must be created manually in the Supabase dashboard before uploads work
+
 ## Post-Implementation Checklist
 - [ ] TypeScript compiles without errors (npm run build)
 - [ ] ESLint passes (npm run lint)
