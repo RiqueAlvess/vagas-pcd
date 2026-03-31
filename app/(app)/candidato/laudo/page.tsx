@@ -21,7 +21,14 @@ export default async function CandidatoLaudoPage() {
     .eq('id', user.id)
     .single<Pick<Candidate, 'medical_status' | 'medical_report_url' | 'medical_notes'>>()
 
-  if (!candidate) redirect('/dashboard')
+  if (!candidate) {
+    return (
+      <div className="p-8 max-w-2xl">
+        <h1 className="text-2xl font-bold text-foreground mb-1">Meu Laudo Médico</h1>
+        <p className="text-sm text-muted-foreground">Carregando perfil...</p>
+      </div>
+    )
+  }
 
   const { medical_status, medical_report_url, medical_notes } = candidate
 

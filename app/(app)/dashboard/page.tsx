@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -17,24 +16,19 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  // Profile missing — create it as safety net (e.g. race condition after email confirmation)
   if (!profile) {
-    const supabaseAdmin = createAdminClient()
-    await supabaseAdmin.from('profiles').insert({
-      id: user.id,
-      email: user.email!,
-      role: 'CANDIDATO',
-      status: 'ATIVO',
-    })
-    redirect('/candidato/laudo')
+    // Profile not created yet — delegate to setup page which creates both
+    // profile and candidates records atomically (do NOT create here and
+    // redirect to /candidato/laudo — that causes a loop if candidates row is missing)
+    redirect('/auth/setup')
   }
 
   // Redirect by role — no loading state, instant
   switch (profile.role) {
-    case 'CANDIDATO': redirect('/candidato/vagas')
+    case 'CANDIDATO': redirect('/candidato/laudo')
     case 'EMPRESA':   redirect('/empresa/vagas')
     case 'MEDICO':    redirect('/medico/laudos')
     case 'ADMIN':     redirect('/admin')
-    default:          redirect('/candidato/vagas')
+    default:          redirect('/candidato/laudo')
   }
 }

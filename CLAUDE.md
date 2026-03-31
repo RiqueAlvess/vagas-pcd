@@ -39,6 +39,11 @@ VISUAL, AUDITIVA, FISICA, MENTAL, MULTIPLA
 5. Storage bucket 'medical-reports' must be created manually in Supabase dashboard
 6. Supabase redirect: configure /auth/callback in Supabase dashboard → Auth → URL Configuration. Without this, the auth code lands on homepage instead of being exchanged for a session.
 7. Performance: middleware must NEVER query the DB. Role checks go in layout.tsx server components only.
+8. Supabase SSR: always return `supabaseResponse` from middleware, never `NextResponse.next()`. Failing to do this breaks cookie forwarding and causes redirect loops. Also must set cookies on `request.cookies` AND recreate `NextResponse.next({ request })` inside `setAll`.
+9. Supabase SSR: use `getUser()` not `getSession()` in middleware. `getSession()` does not validate the token server-side and does not refresh expired tokens.
+10. Next.js 15: `searchParams` and `params` are Promises — always type them as `Promise<{...}>` and `await` them before accessing properties.
+11. Redirect loops: never use `redirect()` inside a page based on business logic (e.g. missing candidates row). Use conditional rendering instead. Only redirect on missing auth.
+12. Profile setup: when creating a new user profile, always create BOTH `profiles` AND `candidates` rows together (in `/auth/setup`). Creating only `profiles` and redirecting to `/candidato/laudo` causes a loop because that page needs the `candidates` row.
 
 ## Design Patterns
 - Server Components fetch data directly via supabase server client

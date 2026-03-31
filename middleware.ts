@@ -2,42 +2,70 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next()
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookies) =>
-          cookies.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          ),
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
       },
     }
   )
 
-  // Refresh session if expired — NO DB QUERY
+  // CRITICAL: use getUser() not getSession() — getSession() does NOT refresh expired tokens
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const isPublic =
-    ['/', '/login', '/signup'].includes(pathname) ||
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/auth')
 
-  if (!user && !isPublic) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  const isPublicPath =
+    pathname === '/' ||
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/api/auth/') ||
+    pathname === '/favicon.ico'
+
+  // Not authenticated and trying to access protected route
+  if (!user && !isPublicPath) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 
-  // Role enforcement: done in layout.tsx server components, NOT here
-  return response
+  // Authenticated user trying to access login/signup — send to dashboard
+  if (user && (pathname === '/login' || pathname === '/signup')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  // IMPORTANT: return supabaseResponse, not NextResponse.next()
+  // This ensures the session cookies are properly forwarded
+  return supabaseResponse
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
