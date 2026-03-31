@@ -37,12 +37,14 @@ VISUAL, AUDITIVA, FISICA, MENTAL, MULTIPLA
 3. Client components use createBrowserClient from @supabase/ssr
 4. RLS policies enforce authorization at DB level — always trust RLS, not app-level checks
 5. Storage bucket 'medical-reports' must be created manually in Supabase dashboard
+6. Supabase redirect: configure /auth/callback in Supabase dashboard → Auth → URL Configuration. Without this, the auth code lands on homepage instead of being exchanged for a session.
+7. Performance: middleware must NEVER query the DB. Role checks go in layout.tsx server components only.
 
 ## Design Patterns
 - Server Components fetch data directly via supabase server client
 - Client Components handle interactions (forms, buttons)
 - API routes (/api/*) handle mutations and use supabaseAdmin for service role ops
-- Middleware handles auth redirect and role-based routing
+- Middleware handles auth redirect only (session check via JWT — no DB query); role enforcement is done in layout.tsx server components
 - Never use 'any' type — define all types in lib/types.ts
 - Auth pattern: always use createServerClient in server components, createBrowserClient in client components
 

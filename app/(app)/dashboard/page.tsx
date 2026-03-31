@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import type { UserRole } from '@/lib/types'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -9,9 +9,7 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -19,26 +17,24 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  const role = profile?.role as UserRole | undefined
+  // Profile missing — create it as safety net (e.g. race condition after email confirmation)
+  if (!profile) {
+    const supabaseAdmin = createAdminClient()
+    await supabaseAdmin.from('profiles').insert({
+      id: user.id,
+      email: user.email!,
+      role: 'CANDIDATO',
+      status: 'ATIVO',
+    })
+    redirect('/candidato/laudo')
+  }
 
-  if (role === 'CANDIDATO') redirect('/candidato/vagas')
-  if (role === 'EMPRESA') redirect('/empresa/vagas')
-  if (role === 'MEDICO') redirect('/medico/laudos')
-  if (role === 'ADMIN') redirect('/admin')
-
-  // Profile not configured yet (e.g. still being set up after email confirmation)
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center space-y-2">
-        <p className="text-slate-600">Configurando sua conta…</p>
-        <p className="text-sm text-slate-400">
-          Se isso demorar, tente{' '}
-          <a href="/login" className="text-[#2563EB] hover:underline">
-            entrar novamente
-          </a>
-          .
-        </p>
-      </div>
-    </div>
-  )
+  // Redirect by role — no loading state, instant
+  switch (profile.role) {
+    case 'CANDIDATO': redirect('/candidato/vagas')
+    case 'EMPRESA':   redirect('/empresa/vagas')
+    case 'MEDICO':    redirect('/medico/laudos')
+    case 'ADMIN':     redirect('/admin')
+    default:          redirect('/candidato/vagas')
+  }
 }
